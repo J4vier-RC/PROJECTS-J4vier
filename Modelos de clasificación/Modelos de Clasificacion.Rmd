@@ -1,0 +1,226 @@
+---
+title: "Modelos de Clasificación"
+output: html_document
+date: "2025-05-13"
+---
+
+###                                                           Javier Ramirez Cervantes
+
+
+Se cargan los datos para realizar el modelo logit y las librerias dplyr y ggplot2 para trabajar el modelo:
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Se crea el DataFrame con todas las observaciones
+edad_x1= c(23, 45, 36, 50, 29, 31, 38, 27, 42, 34, 48, 25, 46, 26, 28, 
+          41, 33, 44, 30, 47, 32, 39, 26, 43, 35, 49, 24, 37, 29, 51)
+
+ingreso_anual_x2= c(35000, 65000, 50000, 80000, 40000, 45000, 55000, 38000, 75000, 52000, 68000, 36000, 66000, 36000, 39000, 72000, 49000, 67000, 41000, 74000, 48000, 60000, 37000, 73000, 51000, 69000, 34000, 53000, 42000, 76000)
+
+
+## Clase, donde 1 es que si realiza una compra, con respecto a las otras variables, y 0 que no lo hace: 
+
+clase_y= c(0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0,
+          1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1)
+
+
+df = data.frame( edad_x1 = edad_x1 ,
+                   ingreso_anual_x2 = ingreso_anual_x2,
+                   clase_y = clase_y)
+
+
+head(df, 3)
+
+```
+
+### Paso 1: Analisis descriptivo de las variables
+* Variable de Clase Y
+
+Desbalanceo agrupando por Clase y haciendo el conteo de casos que caen en una categoria o en otra.
+```{r}
+df %>%
+  group_by(clase_y) %>%
+  summarise(Numero = n())
+
+```
+Los resultados muestran que de un total de 30 datos, 16 son de clase uno, y 14 de clase 0, por lo cual se observa que hay mas datos de personas que si realizaron la compra.
+
+Graficos de violin
+```{r}
+df %>%
+  ggplot(aes(x=as.character(clase_y),y=edad_x1, fill=as.character(clase_y)))+
+  geom_violin()+
+  geom_boxplot()
+
+df %>%
+  ggplot(aes(x=as.character(clase_y),y=ingreso_anual_x2, fill=as.character(clase_y)))+
+  geom_violin()+
+  geom_boxplot()
+```
+En estos graficos se puede observar, que cuando la edad es mas proxima a los 44 años, una persona es mas propensa a realizar una compra, mientras que si es menor de los 30, con una edad aproximada a los 29, la persona no realiza la compra
+
+En cuanto al segundo grafico, la compra se realiza con un ingreso anual aproximado a los 69,000, mientras que con un ingreso anual de 40,000, no se realiza la compra.
+
+* Variable de Edad X1
+
+```{r}
+ed <- df %>%
+  summarise(Media = mean(edad_x1),
+            Mediana = median(edad_x1), 
+            Desviacion = sd(edad_x1) )
+
+Rango = range(edad_x1) 
+
+ed
+
+Rango
+
+boxplot(edad_x1, main="Boxplot de Edad", col = "red")
+
+```
+
+En los resultados se muestra que la media esta cerca de la mediana aunque con un ligero sesgo a la derecha, esto se comprueba con el grafico de caja. En cuanto al valor de la desviacion estandar es alto con respecto al rango de los datos, que va de 23 a 51.
+
+* Variable de Ingreso anual X2
+
+```{r}
+ing <- df %>%
+  summarise(Media = mean(ingreso_anual_x2),
+            Mediana = median(ingreso_anual_x2), 
+            Desviacion = sd(ingreso_anual_x2) )
+
+Rango = range(ingreso_anual_x2) 
+
+ing
+
+Rango
+
+boxplot(ingreso_anual_x2, main="Boxplot de Ingreso Anual", col = "lightgreen")
+```
+
+En los resultados se muestra que la media esta cerca de la mediana aunque con sesgo a la derecha, esto se comprueba con el grafico de caja. En cuanto al valor de la desviacion estandar es alto con respecto al rango de los datos, que va de 34,000 a 80,000.
+
+
+### Paso 2: Construccion del modelo de clasificacion 
+
+
+Estimacion del modelo de regresion logistica:
+
+```{r}
+x_train = df[,c('edad_x1', 'ingreso_anual_x2')]
+y_train = df[,'clase_y']
+modelo = glm(y_train ~ x_train$edad_x1 + x_train$ingreso_anual_x2, family ="binomial")
+summary(modelo)
+```
+Hipotesis nula: H0 -> El coeficiente no es significativo  
+Hipotesis alternativa: Ha -> El coeficiente es significativo
+
+Reglas de decision: p-value > 0.05 No se rechaza H0 // p-value < 0.05 Se rechaza H0
+
+Segun los resultados de los p-values de cada uno de los coeficientes, los resultados sugieren que los coeficientes no son significativos 
+
+Se calcula el valor de la pseudo r2 ajustada
+pseudo R^2 ajustada = 1- ((residual desviance - k )/ (null desviance))
+
+```{r}
+pseudo_r2_adj = 1 - ((modelo$deviance - 3)/(modelo$null.deviance))
+pseudo_r2_adj
+```
+
+De acuerdo con los resultados, el valor de la pseudo r^2 es mayor a uno, lo cual indica un problema de sobreajuste del modelo
+
+
+### Paso 3: Calculo de Probabilidades
+
+Prediccion de las probabilidades del modelo, para comparar resultados:
+
+```{r}
+predicciones = predict(modelo, data.frame( newdata = x_train),
+                       type ='response')
+head(predicciones, 3)
+```
+
+Se convierten las probabilidades estimadas del modelo en categorias para especificar los cambios de categoria acorde a las probabilidades que se calcularon, usando un threshold igual a 0.5:
+
+```{r}
+clasificacion = ifelse(predicciones < 0.5,0,1)
+clasificacion
+```
+
+Se observa el balanceo de la clasificacion
+```{r}
+table(clasificacion)
+```
+Se mantienen los mismos resultados que el balanceo original
+
+### Paso 4: Evaluación de la Matriz de Confusión y Métricas de Desempeño
+
+Se construye la Matriz de confusion:
+
+```{r}
+confusion = table(clasificacion, df$clase_y)
+confusion
+```
+Esta es la matriz de confusion, en la cual se observa que los resultados entre la clasificacion estimada por el modelo y los originales son identicos puesto que no hay ningun valor en false negative o en false positive.
+
+Se calculan las metricas
+```{r}
+# TP = true positive/ FP = false positive/ FN = false negative
+#precision = TP / (TP + FP) 
+precision <- 16 / (16 + 0)
+print(paste("precision es igual a", precision))
+
+#recall / sensibilidad = TP / (TP + FN)
+recall <- 16 / (16 + 0)
+print(paste("recall es igual a", recall))
+
+# f1 score = 2* ( (precision*recall)/(precision + recall) )
+f1_score <- 2 * ( (precision*recall)/(precision + recall) )
+print(paste("f1 score es igual a", f1_score))
+
+```
+
+Estos resultados son perfectos debidos al problema del sobreajuste del modelo, el cual se observa desde el valor de la Pseudo R2 ajustada y se confirma con la matriz de confusion
+
+### Paso 5: Impacto del Umbral de Clasificación
+
+Se genera la simulacion de diferentes valores del threshold para evaluar cual es el valor optimo que permite obtener el mejor f1 score:
+
+```{r}
+model <- glm(clase_y ~ edad_x1 + ingreso_anual_x2, family ="binomial")
+y_prob <- predict(model, df, type='response')
+thresholds <- seq(0, 1, length.out=100)
+precisions <- vector()
+recalls <- vector()
+f1_scores <- vector()
+
+for (threshold in thresholds) {
+  y_pred <- ifelse(y_prob >= threshold, 1, 0)
+  precision <- sum(y_pred[clase_y==1]==1)/ sum(y_pred==1)
+  recall <- sum(y_pred[clase_y==1]==1)/ sum(clase_y==1)
+  f1 <- 2 * ((precision*recall)/(precision+recall))
+  
+  precisions <- c(precisions, precision)
+  recalls <- c(recalls, recall)
+  f1_scores <- c(f1_scores, f1)
+}
+
+max_f1_index <- which.max(f1_scores)
+optimal_threshold <- thresholds[max_f1_index]
+print(paste("el valor optimo del threshold es", optimal_threshold))
+
+optimal_precision <- precisions[max_f1_index]
+print(paste("El valor optimo de la precision es", optimal_precision))
+
+optimal_recalls <- recalls[max_f1_index]
+print(paste( "El valor optimo del Recall es", optimal_recalls)) 
+
+optimal_f1_scores <- f1_scores[max_f1_index]
+print(paste("el valor optimo del f1 score es", optimal_f1_scores))
+
+```
+
+De acuerdo con los resultados anteriores, el valor del threshold que optimiza la capacidad predictiva del modelo para clasificar es 0.0101010101010101, threshold con el cual los valores de la precision, el recall y el f1 score son iguales a uno. Sin embargo, tomando en cuenta los resultados previos del modelo y sus problemas de sobrejauste, los resultados no son fiables debido a dichos problemas. 
+
+En un modelo normal, la relevancia de definir un threshold adecuado puede ayudar a ajustar el modelo para obtener mejores resultados puesto que un threshold demasiado alto o bajo, puede cambiar completamente la forma en la que clasifica el modelo, lo cual se puede observar en los valores de la precision, recall y, principalmente en el del f1 score. En caso de que se haga una mala clasificacion, el modelo no es muy eficiente debido a que no cumple con su objetivo, puesto que podria clasificar en una categoria cuando en realidad corresponde a otra. Por ejemplo, en un modelo de clasificacion de riesgo creditico, encontrar un threshold optimo supone fijar el umbral correcto para otorgar credito a los clientes que tengan baja probabilidad de incumplimiento de pago y evitar otorgar creditos a clientes con alta probabilidad de incumplimiento de pago.
