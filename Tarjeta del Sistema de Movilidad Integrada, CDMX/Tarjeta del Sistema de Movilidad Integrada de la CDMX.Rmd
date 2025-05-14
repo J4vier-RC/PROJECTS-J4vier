@@ -1,0 +1,105 @@
+---
+title: "Tarjeta del Sistema de Movilidad Integrada de la CDMX"
+output:  pdf_document
+date: "2025-05-14"
+---
+
+###                                                    Javier Ramirez Cervantes
+
+## Objetivo
+
+Es un codigo sencillo con el proposito de entender la parte mas fundamental
+del codigo que esta detras del funcionamiento del Sistema de Saldos de las 
+Tarjetas de Movilidad Integrada en la CDMX. 
+
+## Algoritmo
+
+Saldo en las Tarjetas del Sistema de Movilidad Integrada de la CDMX
+
+Para lo anterior: Se va a construir un objeto que se va a llamar 'Movilidad Integrada' 
+el cual tiene dos atributos: 'Dueño' y 'Saldo'.
+Adicionalmente se van a utilizar 3 metodos: Recarga; Viaje; Impresion de saldo.
+
+## Utilizando Python:
+
+```{python}
+class movilidad_integrada:
+    def __init__(self, dueño, saldo_inicial: 0):
+                self.dueño = dueño
+                self.saldo = saldo_inicial
+                print('Su saldo: $', self.saldo,  'pesos. RECARGA EXITOSA')
+        
+    def recarga(self, monto):
+                self.saldo += monto
+                print('Su saldo: $', self.saldo,  'pesos. RECARGA EXITOSA')
+        
+    def viaje(self, monto):
+         if (self.saldo - monto) > 0:
+            self.saldo -= monto
+            print('Su saldo: $', self.saldo,  'pesos. BUEN VIAJE')        
+ 
+         else:
+            print('Saldo insuficiente : $', self.saldo,  'pesos. RECARGUE SALDO')
+            
+    def print_saldo (self):
+        print(self.saldo)
+```
+
+
+## Funcionamiento:
+
+Javier hace una Recarga de $30 pesos
+
+```{python}
+tarjeta_movint = movilidad_integrada('Javier', 30)
+tarjeta_movint.print_saldo()
+tarjeta_movint.dueño
+```
+
+
+Javier y su amigo usan el Metro, por un monto de 10 pesos, para visitar o uno 
+de sus amigos.
+
+```{python}
+tarjeta_movint.viaje(10)
+```
+
+
+Javier y su amigo usan el Cablebus por un monto de 14 pesos.
+
+```{python}
+tarjeta_movint.viaje(14)
+```
+
+
+Despues de una tarde tranquila Javier y su amigo tienen que regresar a sus casas,
+por lo que tienen que repetir su camino. Primero utilizan el cablebus y pagan 14 pesos.
+
+```{python}
+tarjeta_movint.viaje(14)
+```
+
+
+El torniquete muestra el mensaje de "Saldo insuficiente" por lo deciden recargar 
+50 pesos.
+
+```{python}
+tarjeta_movint.recarga(50)
+```
+
+
+Despues de hacer su recarga inician su viaje en el Cablebus por un monto de 14 pesos.
+
+```{python}
+tarjeta_movint.viaje(14)
+```
+
+Nuevamente, Javier y su amigo usan el metro en el cual concluye su viaje compartido, 
+con un costo de 10 pesos.
+
+```{python}
+tarjeta_movint.viaje(10)
+```
+
+ 
+## Fin.
